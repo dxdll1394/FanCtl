@@ -27,6 +27,15 @@ enum RenderMode {
         for (name, view) in pages {
             render(view, size: CGSize(width: 1000, height: 820), to: directory, name: name)
         }
+
+        // The offline state is a different branch of the same views, so it
+        // needs its own store rather than a flag on the seeded one.
+        let offline = FanStore()
+        offline.seedOfflineForRendering()
+        render(
+            AnyView(RootView(store: offline, scrollable: false)),
+            size: CGSize(width: 1000, height: 820), to: directory, name: "offline")
+
         print("已输出到 \(directory.path)")
         exit(0)
     }

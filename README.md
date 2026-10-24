@@ -13,27 +13,32 @@ Control，也不需要禁用 SIP 或加载内核扩展。
 ## 它做什么
 
 ```
-┌──────────────┐   unix socket    ┌────────────────────┐   IOKit    ┌──────────┐
-│ fanui  (UI)  │ ───────────────► │ fand (root daemon) │ ─────────► │ AppleSMC │
-│ fanctl (CLI) │ ◄─────────────── │  控制循环 / 安全    │ ◄───────── │ F0Ac/F0Tg│
-└──────────────┘   JSON 请求响应   └────────────────────┘   读取/写入  └──────────┘
+┌──────────────────┐   unix socket    ┌────────────────────┐   IOKit    ┌──────────┐
+│ FanCtl.app (UI)  │ ───────────────► │ fand (root daemon) │ ─────────► │ AppleSMC │
+│ fanctl (CLI)     │ ◄─────────────── │  控制循环 / 安全    │ ◄───────── │ F0Ac/F0Tg│
+└──────────────────┘   JSON 请求响应   └────────────────────┘   读取/写入  └──────────┘
 ```
 
 读温度和读转速在普通用户下就能做；**写风扇需要 root**，所以只有一个很小的守护进程  
 以 root 运行（launchd 常驻），UI 和 CLI 都通过 `/var/run/fanctl.sock` 与它通信。  
 socket 属主 root、组 `admin`、权限 `0660`，普通用户连不上也不能伪造请求。
 
-## 快速开始
+## 安装
 
-最简单：双击安装包。
+最简单：从 [Releases](https://github.com/dxdll1394/FanCtl/releases/latest) 下载
+`FanCtl-x.y.z.pkg`，双击，输密码，装完即用。一次装好 UI、守护进程、CLI 和开机启动项，
+不需要终端，也不用关 SIP。
+
+> 安装包未签名/未公证。首次打开若被 Gatekeeper 拦下，右键点击 → 打开。
+
+自己打包：
 
 ```bash
-./packaging/build_pkg.sh         # 产出 dist/FanCtl-0.1.0.pkg
-open dist/FanCtl-0.1.0.pkg       # 双击 → 输密码 → 装完即用
+./packaging/build_pkg.sh         # 产出 dist/FanCtl-<版本>.pkg
+open dist/FanCtl-<版本>.pkg      # 双击 → 输密码 → 装完即用
 ```
 
-`.pkg` 会一次性装好 UI、守护进程、CLI 和开机启动项，不需要终端。详见
-[packaging/pkg/README.md](packaging/pkg/README.md)。
+详见 [packaging/pkg/README.md](packaging/pkg/README.md)。
 
 从源码装（开发时用）：
 
@@ -47,8 +52,8 @@ sudo ./install.sh --app          # 顺便打包 /Applications/FanCtl.app
 open -a FanCtl                   # 打开界面
 ```
 
-> 新界面（SwiftUI，内存 ~37 MB）在 [fanui-mac](fanui-mac/)，`--app` 装的是它；
-> 旧的 egui 版 `fanui` 保留在 `crates/fanui`，仅作回退。
+> 界面（SwiftUI，常驻内存 ~40 MB）在 [fanui-mac](fanui-mac/)，`.pkg` 和 `--app`
+> 装的都是它；旧的 egui 版保留在 `crates/fanui`，仅作回退（常驻约 220 MB）。
 
 > 如果机器上原本装着 iStat Menus / Macs Fan Control / TG Pro 的风扇控制，  
 > **先关掉它们的风扇调节**，否则两边会反复覆盖 `F0Tg`，表现是转速来回跳。  
@@ -64,13 +69,15 @@ cargo run -p fanctl -- status                  # 直接读硬件，无需守护�
 
 ## 界面
 
-| 总览 | 曲线 |
-| -- | -- |
-| 总览 | 曲线 |
+![总览](docs/images/overview.png)
 
-| 设置 | 后台服务未安装时 |
-| -- | -------- |
-| 设置 | 离线       |
+| 曲线 | 设置 |
+| -- | -- |
+| ![曲线](docs/images/curve.png) | ![设置](docs/images/settings.png) |
+
+守护进程没起来时界面是这副样子，不会假装一切正常：
+
+![离线](docs/images/offline.png)
 
 - **总览**：当前温度 / 实际转速 / 目标转速 / 硬件范围，七组温度传感器的实时条形图，  
   控制方式切换（系统自动 / 固定转速 / 温度曲线），以及温度-转速历史曲线（支持拖动、  
@@ -176,38 +183,49 @@ fanctl log --flush      # 立刻把内存里的缓冲写盘
 
 ## 安装了什么
 
-| 文件       | 路径                                                 |
+| 文件 | 路径 |
 | -------- | -------------------------------------------------- |
-| 守护进程     | `/usr/local/libexec/fanctl/fand`                   |
-| 命令行      | `/usr/local/bin/fanctl`                            |
-| UI（命令行版） | `/usr/local/bin/fanui`                             |
-| UI（App）  | `/Applications/FanCtl.app`（`--app`）                |
-| launchd  | `/Library/LaunchDaemons/local.fanctl.daemon.plist` |
-| 配置       | `/Library/Application Support/FanCtl/config.json`  |
-| 日志       | `/Library/Logs/FanCtl/daemon.log`                  |
-| socket   | `/var/run/fanctl.sock`                             |
+| 守护进程 | `/usr/local/libexec/fanctl/fand` |
+| 命令行 | `/usr/local/bin/fanctl` |
+| UI（App） | `/Applications/FanCtl.app` |
+| launchd | `/Library/LaunchDaemons/local.fanctl.daemon.plist` |
+| 配置 | `/Library/Application Support/FanCtl/config.json` |
+| 日志 | `/Library/Logs/FanCtl/daemon.log` |
+| socket | `/var/run/fanctl.sock` |
+
+`.pkg` 装的就是这几样。从源码装（`./install.sh`）只装守护进程和 CLI；
+加 `--app` 才会带上 `/Applications/FanCtl.app`。旧的命令行 UI
+`/usr/local/bin/fanui` 已经不再安装。
 
 卸载（会把风扇交还系统）：
 
 ```bash
-sudo ./install.sh --uninstall
+sudo ./install.sh --uninstall          # 从源码装的
+# 或用 .pkg 装的，直接跑  packaging/uninstall-all.sh
 ```
 
 ## 开发
 
 ```bash
-cargo test --workspace                    # 单测
-cargo run -p fancore --example probe      # 打印本机所有温度键与分组
-cargo run -p fand -- --dry-run            # 只读守护进程，安全演练控制循环
-FANCtl_SHOT=/tmp/shots cargo run -p fanui  # 渲染三个页面截图（无需人工操作）
-./packaging/build_app.sh /tmp/FanCtl.app   # 直接产出可双击的 .app
+cargo test --workspace                     # 单测
+cargo run -p fancore --example probe       # 打印本机所有温度键与分组
+cargo run -p fand -- --dry-run             # 只读守护进程，安全演练控制循环
+
+./fanui-mac/build.sh                       # 编译 SwiftUI 界面
+./fanui-mac/build/FanCtl.app/Contents/MacOS/FanCtl --render /tmp/shots
+                                           # 离屏渲染四个页面（含离线态）
+./fanui-mac/build/FanCtl.app/Contents/MacOS/FanCtl --shot /tmp/s.png --tab 1
+                                           # 截真实窗口（输入框才画得对）
+
+./packaging/build_pkg.sh                   # 打 .pkg
 ```
 
-`cargo run -p fanui` 需要同时有守护进程在跑（真实的或 `--dry-run` 的），  
+`cargo run -p fanui`（旧 egui 界面）需要同时有守护进程在跑（真实的或 `--dry-run` 的），  
 界面里所有「写入」在 dry-run 下只会写日志，不会碰 SMC。
 
-> 截图模式用 `FANCtl_SHOT` 环境变量触发，只用于视觉回归；它同时编译了  
-> `eframe/__screenshot`，正式发布可以去掉。
+> 旧的 egui 版用 `FANCtl_SHOT` 环境变量触发截图，只用于视觉回归；它同时编译了  
+> `eframe/__screenshot`，正式发布可以去掉。SwiftUI 版用 `--shot` / `--render`，
+> 不需要额外 feature。
 
 ### 代码结构
 
@@ -223,7 +241,10 @@ crates/
 │   └── rotation.rs     历史环形缓冲
 ├── fand/      root 守护进程：控制循环 + socket 服务
 ├── fanctl/    命令行
-└── fanui/     egui 界面（托盘、总览、曲线、设置）
+└── fanui/     旧的 egui 界面（仅作回退，内存约 220 MB）
+
+fanui-mac/     SwiftUI 界面（默认）.app 由 packaging/build_app.sh 打出
+packaging/     .pkg 打包脚本、launchd plist、图标生成
 ```
 
 ## 实机验证记录
@@ -252,7 +273,11 @@ $ fanctl selftest
 
 - 只在 **Mac mini M4（Mac16,10，单风扇 1000–4900 rpm，macOS 27）** 上做过真机验证  
   （见上一节）。其它 Apple Silicon 靠运行时探测键名与范围，但没有实机验证。
-- 需要在 macOS 12+、Rust 1.85+ 下构建。Intel Mac 的 SMC 布局不同，不支持。
+- Rust 侧需要 macOS 12+、Rust 1.85+ 才能构建；**SwiftUI 界面要求 macOS 14+**
+  （用到 `ChartProxy.plotFrame`），`.pkg` 的 `Distribution.xml` 已标注这个下限。
+  Intel Mac 的 SMC 布局不同，不支持。
+- `.pkg` 目前没有代码签名和公证。首次打开会被 Gatekeeper 拦一次，右键 → 打开即可。
+  要给别人分发最好自己签名：`./packaging/build_pkg.sh --sign "Developer ID Installer: ..."`。
 - 同时运行 fankit / Macs Fan Control / iStat / TG Pro 的风扇守护进程会互相抢控制权：  
   症状是 `F0Tg` 刚写进去就被别家改回去（`fanctl status` 里目标转速不断跳回默认值）。  
   本项目只在目标变化时写一次，所以出现这种症状基本可以断定有别的程序在周期性覆盖，  

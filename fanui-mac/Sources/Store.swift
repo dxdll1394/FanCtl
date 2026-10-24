@@ -403,6 +403,15 @@ extension FanStore {
                 mode: .curve)
         }
     }
+
+    /// The "daemon is not running" state, for `--render`. Deliberately leaves
+    /// `snapshot` nil: that is exactly what the views branch on.
+    @MainActor
+    func seedOfflineForRendering() {
+        self.snapshot = nil
+        self.connected = false
+        self.lastError = ClientError.notRunning(socketPath).errorDescription
+    }
 }
 
 
