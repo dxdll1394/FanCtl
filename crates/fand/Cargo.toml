@@ -1,0 +1,21 @@
+[package]
+name = "fand"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "privileged fan control daemon for Apple Silicon Macs"
+
+[lib]
+name = "fand"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fand"
+path = "src/main.rs"
+
+[dependencies]
+fancore.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+libc.workspace = true
+chrono.workspace = true

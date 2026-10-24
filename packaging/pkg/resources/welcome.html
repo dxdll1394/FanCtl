@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><style>
+body { font: 13px -apple-system, "PingFang SC", sans-serif; margin: 0; padding: 2px 6px; color: #1d1d1f; }
+h2 { font-size: 15px; margin: 0 0 10px; }
+p { margin: 0 0 9px; line-height: 1.5; }
+code { font-family: ui-monospace, Menlo, monospace; background: #f0f0f2; padding: 1px 4px; border-radius: 3px; }
+ul { margin: 0 0 9px; padding-left: 18px; line-height: 1.6; }
+</style></head>
+<body>
+<h2>FanCtl 会安装三样东西</h2>
+<ul>
+  <li><b>FanCtl.app</b> — 菜单栏常驻的图形界面（窗口 + 菜单栏）</li>
+  <li><b>fand</b> — 以 root 运行的后台服务，真正读写 AppleSMC</li>
+  <li><b>fanctl</b> — 命令行工具，脚本化用</li>
+</ul>
+<p>安装程序会要求输入管理员密码，然后自动注册开机启动的服务。</p>
+<p>安装完成后，风扇控制立即生效。<b>不需要</b>关闭 SIP，也<b>不安装</b>内核扩展。</p>
+<h2>如果之前装过旧版</h2>
+<p>安装程序会先停掉旧的守护进程、把风扇交还 macOS，再装新版。你的曲线和传感器设置会保留在
+<code>/Library/Application Support/FanCtl/config.json</code>。</p>
+</body>
+</html>

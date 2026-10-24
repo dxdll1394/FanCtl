@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/fancore",
+    "crates/fand",
+    "crates/fanctl",
+    "crates/fanui",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.85"
+
+[workspace.dependencies]
+fancore = { path = "crates/fancore" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+libc = "0.2"
+chrono = "0.4"
+eframe = { version = "0.32.3", features = ["default_fonts", "glow", "persistence"] }
+egui = "0.32"
+egui_plot = "0.33"
+tray-icon = "0.26"
+open = "5"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[profile.release]
+lto = "thin"
+strip = true
+codegen-units = 1

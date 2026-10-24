@@ -1,0 +1,26 @@
+[package]
+name = "fanui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "menu bar and window UI for fanctl"
+
+[[bin]]
+name = "fanui"
+path = "src/main.rs"
+
+[dependencies]
+fancore.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+libc.workspace = true
+chrono.workspace = true
+# `__screenshot` powers `FANCtl_SHOT` (visual regression only); drop it for
+# a leaner release binary.
+eframe = { workspace = true, features = ["__screenshot"] }
+egui.workspace = true
+egui_plot.workspace = true
+tray-icon.workspace = true
+image.workspace = true
+open.workspace = true
+arboard = "3"

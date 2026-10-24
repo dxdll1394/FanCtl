@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><style>
+body { font: 13px -apple-system, "PingFang SC", sans-serif; margin: 0; padding: 2px 6px; color: #1d1d1f; }
+h2 { font-size: 15px; margin: 0 0 10px; }
+p { margin: 0 0 9px; line-height: 1.5; }
+code { font-family: ui-monospace, Menlo, monospace; background: #f0f0f2; padding: 1px 4px; border-radius: 3px; }
+ul { margin: 0 0 9px; padding-left: 18px; line-height: 1.6; }
+</style></head>
+<body>
+<h2>装好了</h2>
+<p>打开 <b>FanCtl</b>（在「应用程序」里，或 Spotlight 搜 FanCtl）。窗口关掉后它留在菜单栏，
+实时显示 <code>62° 2400</code>。</p>
+<p>默认是「温度曲线」模式：45°C 以下 1000 rpm，90°C 以上接近满速。
+想改成别的，在界面的「控制方式」里切换，或跑：</p>
+<ul>
+  <li><code>fanctl status</code> — 看转速和温度</li>
+  <li><code>fanctl set 2200</code> — 固定 2200 rpm</li>
+  <li><code>fanctl auto</code> — 交还 macOS 自动控制</li>
+  <li><code>fanctl doctor</code> — 自检</li>
+</ul>
+<h2>卸载</h2>
+<p>先跑 <code>sudo fanctl daemon uninstall</code>（这会把风扇交还系统），
+然后把 FanCtl.app 拖到废纸篓，最后 <code>sudo rm -rf "/Library/Application Support/FanCtl" /Library/Logs/FanCtl</code>。</p>
+</body>
+</html>

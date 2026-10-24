@@ -1,0 +1,61 @@
+#!/bin/bash
+# FanCtl .pkg — preinstall.
+#
+# Runs as root before the payload is unpacked. Its job is to leave the machine
+# in a clean state so the new payload can land exactly where intended:
+#
+#   1. stop the old daemon (frees SMC control so --restore-auto sticks)
+#   2. hand the fans back to macOS
+#   3. remove the CLI-era UI binary from the egui build
+#   4. remove stale app copies that PackageKit's relocation would otherwise
+#      keep around (see the note on *.localized below)
+#
+# Deliberately does NOT call `launchctl disable`. That writes a permanent entry
+# into /var/db/com.apple.xpc.launchd/disabled.plist, after which `bootstrap`
+# in postinstall fails and the whole installation aborts. `bootout` alone stops
+# the job without leaving any persistent state behind.
+#
+# FANCTL_PKG_ROOT exists so the script can be exercised against a scratch
+# directory during development; Installer never sets it.
+
+set -euo pipefail
+
+ROOT="${FANCTL_PKG_ROOT:-}"
+LABEL="local.fanctl.daemon"
+PLIST="$ROOT/Library/LaunchDaemons/${LABEL}.plist"
+
+# 1. Stop the previous daemon first: booting it out is what frees the SMC
+#    control mode, so --restore-auto afterwards actually sticks.
+if [[ -z "$ROOT" ]]; then
+  launchctl bootout "system/${LABEL}" 2>/dev/null || true
+  [[ -f "$PLIST" ]] && launchctl bootout system "$PLIST" 2>/dev/null || true
+fi
+
+# 2. Hand the fans back to macOS. A failed write here (e.g. first install,
+#    nothing to restore) must not abort the installation.
+if [[ -x "$ROOT/usr/local/libexec/fanctl/fand" ]]; then
+  "$ROOT/usr/local/libexec/fanctl/fand" --restore-auto >/dev/null 2>&1 || true
+fi
+
+# 3. Remove artefacts from the egui era. The window UI ships inside the .app
+#    now, so a stray /usr/local/bin/fanui would be a second front end.
+rm -f "$ROOT/usr/local/bin/fanui"
+rm -f "$ROOT/Library/LaunchAgents/local.fanctl.ui.plist"
+
+# 4. Stale app copies. When an installed bundle's identifier does not match the
+#    one in the package, PackageKit refuses to overwrite it and relocates the
+#    existing bundle to "<Name>.localized/" instead. If that install is then
+#    rolled back, the relocated copy is orphaned and the user ends up with two
+#    FanCtl.app in /Applications. Drop any such leftovers first, so the payload
+#    always installs to the canonical path.
+APPS="$ROOT/Applications"
+if [[ -d "$APPS" ]]; then
+  for stale in "$APPS"/FanCtl.localized "$APPS"/FanCtl*.localized; do
+    [[ -d "$stale" ]] || continue
+    rm -rf "$stale"
+    echo "FanCtl: 已清理残留副本 ${stale#"$ROOT"}"
+  done
+fi
+
+echo "FanCtl: 已停止旧版守护进程并把风扇交还系统"
+exit 0

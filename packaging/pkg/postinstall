@@ -1,0 +1,73 @@
+#!/bin/bash
+# FanCtl .pkg — postinstall.
+#
+# Runs as root after the payload lands. Registers the LaunchDaemon with launchd
+# and waits for the socket so the installer's "安装成功" is actually true.
+#
+# Two rules learned the hard way:
+#
+# * `launchctl enable` must come BEFORE `bootstrap`. A label left disabled by an
+#   earlier uninstall lives in /var/db/com.apple.xpc.launchd/disabled.plist, and
+#   bootstrap refuses to load a disabled job.
+# * This script must never return non-zero. Installer turns any failure here
+#   into PKInstallErrorDomain 112 ("运行软件包的脚本时出错") and rolls the whole
+#   installation back — including the files that were already placed correctly.
+#   A daemon that won't start is a degraded state the app can report, not a
+#   reason to leave the user with nothing installed.
+
+set -uo pipefail
+
+ROOT="${FANCTL_PKG_ROOT:-}"
+LABEL="local.fanctl.daemon"
+PLIST="$ROOT/Library/LaunchDaemons/${LABEL}.plist"
+SOCKET="/var/run/fanctl.sock"
+LOG="$ROOT/Library/Logs/FanCtl/daemon.log"
+
+# Directories the daemon expects. `pkgbuild` cannot carry empty directories, so
+# create them here with the modes the daemon assumes.
+mkdir -p "$ROOT/Library/Logs/FanCtl" 2>/dev/null
+mkdir -p "$ROOT/Library/Application Support/FanCtl" 2>/dev/null
+chmod 755 "$ROOT/Library/Logs/FanCtl" 2>/dev/null
+chmod 700 "$ROOT/Library/Application Support/FanCtl" 2>/dev/null
+chown root:wheel "$ROOT/Library/Logs/FanCtl" "$ROOT/Library/Application Support/FanCtl" 2>/dev/null
+
+if [[ -n "$ROOT" ]]; then
+  echo "FanCtl: 测试模式（FANCTL_PKG_ROOT），跳过 launchctl"
+  exit 0
+fi
+
+# Leave no stale state from a previous install.
+launchctl bootout "system/${LABEL}" >/dev/null 2>&1
+
+# Clear any persistent "disabled" flag first. This is a no-op when the label is
+# not disabled, and it is what makes re-installing work.
+launchctl enable "system/${LABEL}" >/dev/null 2>&1
+
+bootstrapped=1
+if ! launchctl bootstrap system "$PLIST"; then
+  # Old syntax, for completeness; also covers jobs already loaded under a
+  # different path.
+  launchctl load -w "$PLIST" >/dev/null 2>&1 || bootstrapped=0
+fi
+
+# Nudge the job so it starts now rather than at the next boot.
+launchctl kickstart -k "system/${LABEL}" >/dev/null 2>&1
+
+for _ in $(seq 1 25); do
+  [[ -S "$SOCKET" ]] && break
+  sleep 0.2
+done
+
+if [[ -S "$SOCKET" ]]; then
+  echo "FanCtl: 守护进程已启动"
+elif [[ $bootstrapped -eq 0 ]]; then
+  echo "FanCtl: 无法注册守护进程，打开 FanCtl.app 会显示修复入口" >&2
+  echo "        手动排查：sudo launchctl bootstrap system $PLIST" >&2
+else
+  echo "FanCtl: 守护进程没有起来，检查 $LOG" >&2
+  tail -20 "$LOG" 2>/dev/null >&2
+fi
+
+# Always succeed: the payload is in place, and the app surfaces the daemon
+# state with a retry button. See the note at the top of this file.
+exit 0

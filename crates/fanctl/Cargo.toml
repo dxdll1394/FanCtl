@@ -1,0 +1,16 @@
+[package]
+name = "fanctl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "fanctl"
+path = "src/main.rs"
+
+[dependencies]
+fancore.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+libc.workspace = true
+chrono.workspace = true

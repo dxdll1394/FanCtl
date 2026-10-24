@@ -1,0 +1,15 @@
+/target
+.DS_Store
+*.png.bak
+
+# Build output: `./packaging/build_pkg.sh` writes here, and the .pkg is published
+# as a GitHub Release asset rather than committed.
+dist/
+
+# SwiftUI front end builds into `fanui-mac/build/FanCtl.app`.
+fanui-mac/build/
+
+# Editor / tooling noise
+.venv/
+__pycache__/
+*.swp
